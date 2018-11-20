@@ -115,6 +115,10 @@ public class TestReflect {
     assertEquals(1, data.resolveUnion(s, new ArrayList<Float>()));
   }
 
+  @Test public void testUnionWithSubTypeConversions() {
+    //TODO:
+  }
+
   @Test public void testUnionWithMap() {
     Schema s = new Schema.Parser().parse
       ("[\"null\", {\"type\":\"map\",\"values\":\"float\"}]");

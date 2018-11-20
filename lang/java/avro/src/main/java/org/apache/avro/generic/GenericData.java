@@ -804,6 +804,21 @@ public class GenericData {
     // for example, a conversion could return a map
     if (datum != null) {
       Map<String, Conversion<?>> conversions = conversionsByClass.get(datum.getClass());
+
+      //adding check for resolving conversions for super-classes
+      //this works in case we want to add conversion for the base-class and want to apply for all
+      //sub-types
+      //TODO: optimise this by caching so that this is not calculated each time
+      Class<?> clazz = datum.getClass().getSuperclass();
+      while (!clazz.getName().equals(Object.class.getName()) ) {
+        Map<String, Conversion<?>> clazzConversion = conversionsByClass.get(clazz);
+        if(clazzConversion != null && conversions == null) {
+          conversions = clazzConversion;
+        } else if(clazzConversion != null) {
+          conversions.putAll(clazzConversion);
+        }
+        clazz = clazz.getSuperclass();
+      }
       if (conversions != null) {
         List<Schema> candidates = union.getTypes();
         for (int i = 0; i < candidates.size(); i += 1) {

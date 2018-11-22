@@ -17,21 +17,26 @@
  */
 package org.apache.avro.generic;
 
-import java.nio.ByteBuffer;
+import com.google.common.collect.MapMaker;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import java.util.Set;
 import org.apache.avro.AvroMissingFieldException;
 import org.apache.avro.AvroRuntimeException;
@@ -47,16 +52,13 @@ import org.apache.avro.UnresolvedUnionException;
 import org.apache.avro.io.BinaryData;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.BinaryEncoder;
-import org.apache.avro.io.DecoderFactory;
-import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.io.parsing.ResolvingGrammarGenerator;
 import org.apache.avro.util.Utf8;
-
 import org.codehaus.jackson.JsonNode;
-
-import com.google.common.collect.MapMaker;
 
 /** Utilities for generic Java data. See {@link GenericRecordBuilder} for a convenient
  * way to build {@link GenericRecord} instances.
@@ -671,13 +673,39 @@ public class GenericData {
       toString(datum, buffer, seenObjects);
       seenObjects.remove(datum);
     } else {
-      if(datum instanceof java.lang.Enum || datum instanceof java.util.Date
-        || datum instanceof java.time.temporal.Temporal) {
+      if(datum instanceof java.lang.Enum) {
         writeQuotedString(datum, buffer);
       } else {
-        buffer.append(datum);
+        boolean isDateOrTimeType = writeDateAndTimeToJsonTypes(buffer, datum);
+        if(!isDateOrTimeType) {
+          buffer.append(datum);
+        }
       }
     }
+  }
+
+  @SuppressWarnings("Since15")
+  private boolean writeDateAndTimeToJsonTypes(StringBuilder buffer, Object datum) {
+    if (datum instanceof java.util.Date) {// || datum instanceof java.time.temporal.Temporal) {
+      java.util.Date date = (java.util.Date) datum;
+      buffer.append(date.getTime());
+    } else if(datum instanceof java.time.Duration) {
+      Duration duration = (Duration) datum;
+      buffer.append(duration.toMillis());
+    } else if(datum instanceof java.time.LocalDate) {
+      LocalDate localDate = (LocalDate) datum;
+      buffer.append(localDate.toEpochDay());
+    } else if(datum instanceof java.time.LocalDateTime) {
+      LocalDateTime localDateTime = (LocalDateTime) datum;
+      ZonedDateTime zonedDateTime = localDateTime.atZone(ZoneId.systemDefault());
+      buffer.append(zonedDateTime.toInstant().toEpochMilli());
+    } else if(datum instanceof java.time.ZonedDateTime) {
+      ZonedDateTime zonedDateTime = (ZonedDateTime) datum;
+      buffer.append(zonedDateTime.toInstant().toEpochMilli());
+    } else {
+      return false;
+    }
+    return true;
   }
 
   private void writeQuotedString(Object datum, StringBuilder buffer) {

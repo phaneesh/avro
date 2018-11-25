@@ -18,11 +18,13 @@ public class SchemaNamer {
 
   private final String prefixToAttach;
   private final String prefixToMatch;
-  public static final SchemaNamer DEFAULT_SCHEMA_NAMER = new SchemaNamer("", "");
+  private final String prefixToIgnore;
+  public static final SchemaNamer DEFAULT_SCHEMA_NAMER = new SchemaNamer("", "", "");
 
-  public SchemaNamer(String prefixToAttach, String prefixToMatch) {
+  public SchemaNamer(String prefixToAttach, String prefixToMatch, String prefixToIgnore) {
     this.prefixToAttach = prefixToAttach;
     this.prefixToMatch = prefixToMatch;
+    this.prefixToIgnore = prefixToIgnore;
   }
 
   public String getName(Class<?> clazz) {
@@ -39,7 +41,8 @@ public class SchemaNamer {
 
   public String getNamespace(Package pkg) {
     String pkgName = pkg.getName();
-    if (prefixToAttach != null && !"".equals(prefixToAttach) && pkgName.startsWith(prefixToMatch)) {
+    if (prefixToAttach != null && !"".equals(prefixToAttach) &&
+      pkgName.startsWith(prefixToMatch) && !pkgName.startsWith(prefixToIgnore)) {
       return prefixToAttach + "." + pkgName;
     } else {
       return pkgName;

@@ -18,7 +18,15 @@
 
 package org.apache.avro.reflect;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.avro.Schema;
+import org.apache.avro.Schema.Parser;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericData.Array;
+import org.apache.avro.generic.GenericData.Record;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.specific.SchemaNamer;
 import org.junit.Test;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -26,7 +34,9 @@ import java.util.Collections;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.lessThan;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class TestReflectData {
   @Test
@@ -49,5 +59,52 @@ public class TestReflectData {
 
     assertThat("ReflectData cache should release references",
         classData.bySchema.size(), lessThan(numSchemas));
+  }
+
+  private class R1 {
+    private int id;
+    private List<String> names;
+
+    public R1(int id, List<String> names) {
+      this.id = id;
+      this.names = names;
+    }
+
+    public int getId() {
+      return id;
+    }
+
+    public List<String> getNames() {
+      return names;
+    }
+  }
+
+  @Test
+  public void testSchemaNamer() {
+    SchemaNamer schemaNamer = new SchemaNamer("prefix1", "org.apache");
+
+    ReflectData reflectData = new ReflectData.AllowNull(schemaNamer);
+    Schema schema = reflectData.getSchema(R1.class);
+    String schemaJson = schema.toString();
+    assertNotNull(schemaJson);
+
+    Schema.Parser parser = new Parser();
+    Schema parsedSchema = parser.parse(schemaJson);
+    assertNotNull(parsedSchema);
+
+    GenericData.Record record = new Record(schema);
+    record.put("id", 123);
+
+    Schema namesSchema = new Schema.Parser().parse("{\"name\":\"names\",\"type\":[\"null\",{\"type\":\"array\",\"items\":\"string\",\"java-class\":\"java.util.List\"}],\"default\":null}");
+
+    ArrayList<String> names = new ArrayList<String>();
+    names.add("foo");
+    names.add("bar");
+
+    GenericData.Array<String> namesArray = new GenericData.Array<String>(namesSchema, names);
+    record.put("names", namesArray);
+
+    boolean validate = reflectData.validate(schema, record);
+    assertTrue(validate);
   }
 }

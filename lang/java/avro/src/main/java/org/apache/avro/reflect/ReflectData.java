@@ -54,6 +54,7 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericFixed;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.avro.io.BinaryData;
+import org.apache.avro.specific.SchemaNamer;
 import org.apache.avro.util.ClassUtils;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
@@ -78,6 +79,12 @@ public class ReflectData extends SpecificData {
     /** Return the singleton instance. */
     public static AllowNull get() { return INSTANCE; }
 
+    public AllowNull() {}
+
+    public AllowNull(SchemaNamer schemaNamer) {
+      super(schemaNamer);
+    }
+
     @Override
     protected Schema createFieldSchema(Field field, Map<String, Schema> names) {
       Schema schema = super.createFieldSchema(field, names);
@@ -98,6 +105,10 @@ public class ReflectData extends SpecificData {
   /** Construct with a particular classloader. */
   public ReflectData(ClassLoader classLoader) {
     super(classLoader);
+  }
+
+  public ReflectData(SchemaNamer schemaNamer) {
+    super(schemaNamer);
   }
 
   /** Return the singleton instance. */
@@ -466,8 +477,8 @@ public class ReflectData extends SpecificData {
       Package pkg1 = keyClass.getPackage();
       Package pkg2 = valueClass.getPackage();
 
-      if (pkg1 != null && pkg1.getName().startsWith("java") &&
-        pkg2 != null && pkg2.getName().startsWith("java")) {
+      if (pkg1 != null && getPkgName(keyClass).startsWith("java") &&
+        pkg2 != null && getPkgName(valueClass).startsWith("java")) {
         return NS_MAP_ARRAY_RECORD +
           keyClass.getSimpleName() + valueClass.getSimpleName();
       }
@@ -520,18 +531,18 @@ public class ReflectData extends SpecificData {
         Class key = (Class)params[0];
         if (isStringable(key)) {                             // Stringable key
           Schema schema = Schema.createMap(createSchema(params[1], names));
-          schema.addProp(KEY_CLASS_PROP, key.getName());
+          schema.addProp(KEY_CLASS_PROP, getFullName(key));
           return schema;
         } else if (key != String.class) {
           Schema schema = createNonStringMapSchema(params[0], params[1], names);
-          schema.addProp(CLASS_PROP, raw.getName());
+          schema.addProp(CLASS_PROP, getFullName(raw));
           return schema;
         }
       } else if (Collection.class.isAssignableFrom(raw)) {   // Collection
         if (params.length != 1)
           throw new AvroTypeException("No array type specified.");
         Schema schema = Schema.createArray(createSchema(params[0], names));
-        schema.addProp(CLASS_PROP, raw.getName());
+        schema.addProp(CLASS_PROP, getFullName(raw));
         return schema;
       } else if(params.length > 0) {
         boolean hasWildCardParams = false;
@@ -570,9 +581,9 @@ public class ReflectData extends SpecificData {
           }
           String recordName = recordNameBuilder.toString();
           Schema paramSchema = Schema.createRecord(recordName, null,
-            raw.getPackage().getName(), false);
+            getPkgName(raw), false);
           paramSchema.setFields(fields);
-          paramSchema.addProp(CLASS_PROP, raw.getName());
+          paramSchema.addProp(CLASS_PROP, getFullName(raw));
           return Schema.createParam(paramSchema);
         }
       }
@@ -601,11 +612,11 @@ public class ReflectData extends SpecificData {
         Class component = c.getComponentType();
         if (component == Byte.TYPE) {                        // byte array
           Schema result = Schema.create(Schema.Type.BYTES);
-          result.addProp(CLASS_PROP, c.getName());
+          result.addProp(CLASS_PROP, getFullName(c));
           return result;
         }
         Schema result = Schema.createArray(createSchema(component, names));
-        result.addProp(CLASS_PROP, c.getName());
+        result.addProp(CLASS_PROP, getFullName(c));
         setElement(result, component);
         return result;
       }
@@ -622,13 +633,13 @@ public class ReflectData extends SpecificData {
       if (conversion != null) {
         return conversion.getRecommendedSchema();
       }
-      String fullName = c.getName();
+      String fullName = getFullName(c);
       Schema schema = names.get(fullName);
       if (schema == null) {
         String name = c.getSimpleName();
-        String space = c.getPackage() == null ? "" : c.getPackage().getName();
+        String space = c.getPackage() == null ? "" : getPkgName(c);
         if (c.getEnclosingClass() != null)                   // nested class
-          space = c.getEnclosingClass().getName() + "$";
+          space = getFullName(c.getEnclosingClass()) + "$";
         Union union = c.getAnnotation(Union.class);
         Schema unionSchema = getUnionSchema(c, names);
         if (union != null) {                                 // union annotated
@@ -637,7 +648,7 @@ public class ReflectData extends SpecificData {
           return unionSchema;
         } else if (isStringable(c)) {                        // Stringable
           Schema result = Schema.create(Schema.Type.STRING);
-          result.addProp(CLASS_PROP, c.getName());
+          result.addProp(CLASS_PROP, getFullName(c));
           return result;
         } else if (c.isEnum()) {                             // Enum
           List<String> symbols = new ArrayList<String>();
@@ -657,7 +668,7 @@ public class ReflectData extends SpecificData {
           boolean error = Throwable.class.isAssignableFrom(c);
           schema = Schema.createRecord(name, null /* doc */, space, error);
           consumeAvroAliasAnnotation(c, schema);
-          names.put(c.getName(), schema);
+          names.put(getFullName(c), schema);
           for (Field field : getCachedFields(c))
             if ((field.getModifiers()&(Modifier.TRANSIENT|Modifier.STATIC))==0
                 && !field.isAnnotationPresent(AvroIgnore.class)) {
@@ -732,7 +743,7 @@ public class ReflectData extends SpecificData {
     Class<?> c = (Class<?>)element;
     Union union = c.getAnnotation(Union.class);
     if (union != null)                          // element is annotated union
-      schema.addProp(ELEMENT_PROP, c.getName());
+      schema.addProp(ELEMENT_PROP, getFullName(c));
   }
 
   // construct a schema from a union annotation
@@ -808,6 +819,14 @@ public class ReflectData extends SpecificData {
     return fieldsList;
   }
 
+  private String getFullName(Class<?> c) {
+    return schemaNamer.getFullName(c);
+  }
+
+  private String getPkgName(Class<?> clazz) {
+    return schemaNamer.getNamespace(clazz);
+  }
+
   /** Create a schema for a field. */
   protected Schema createFieldSchema(Field field, Map<String, Schema> names) {
     AvroEncode enc = field.getAnnotation(AvroEncode.class);
@@ -840,7 +859,7 @@ public class ReflectData extends SpecificData {
   public Protocol getProtocol(Class iface) {
     Protocol protocol =
       new Protocol(iface.getSimpleName(),
-                   iface.getPackage()==null?"":iface.getPackage().getName());
+                   iface.getPackage()==null?"": getPkgName(iface));
     Map<String,Schema> names = new LinkedHashMap<String,Schema>();
     Map<String,Message> messages = protocol.getMessages();
     for (Method method : iface.getMethods())

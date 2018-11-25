@@ -96,12 +96,21 @@ public class SpecificData extends GenericData {
     stringableClasses.add(java.io.File.class);
   }
 
+  protected final SchemaNamer schemaNamer;
+
   /** For subclasses.  Applications normally use {@link SpecificData#get()}. */
-  public SpecificData() {}
+  public SpecificData() {
+    schemaNamer = SchemaNamer.DEFAULT_SCHEMA_NAMER;
+  }
 
   /** Construct with a specific classloader. */
   public SpecificData(ClassLoader classLoader) {
     super(classLoader);
+    this.schemaNamer = SchemaNamer.DEFAULT_SCHEMA_NAMER;
+  }
+
+  public SpecificData(SchemaNamer schemaNamer) {
+    this.schemaNamer = schemaNamer;
   }
 
   @Override
@@ -281,7 +290,7 @@ public class SpecificData extends GenericData {
       }
     } else if (type instanceof Class) {               // class
       Class c = (Class)type;
-      String fullName = c.getName();
+      String fullName = schemaNamer.getFullName(c);
       Schema schema = names.get(fullName);
       if (schema == null)
         try {
@@ -291,7 +300,7 @@ public class SpecificData extends GenericData {
             // HACK: schema mismatches class. maven shade plugin? try replacing.
             schema = Schema.parse
               (schema.toString().replace(schema.getNamespace(),
-                                         c.getPackage().getName()));
+                                         schemaNamer.getNamespace(c)));
         } catch (NoSuchFieldException e) {
           throw new AvroRuntimeException("Not a Specific class: "+c);
         } catch (IllegalAccessException e) {
@@ -322,10 +331,10 @@ public class SpecificData extends GenericData {
   public Protocol getProtocol(Class iface) {
     try {
       Protocol p = (Protocol)(iface.getDeclaredField("PROTOCOL").get(null));
-      if (!p.getNamespace().equals(iface.getPackage().getName()))
+      if (!p.getNamespace().equals(schemaNamer.getNamespace(iface)))
         // HACK: protocol mismatches iface. maven shade plugin? try replacing.
         p = Protocol.parse(p.toString().replace(p.getNamespace(),
-                                                iface.getPackage().getName()));
+                                                schemaNamer.getNamespace(iface)));
       return p;
    } catch (NoSuchFieldException e) {
       throw new AvroRuntimeException("Not a Specific protocol: "+iface);

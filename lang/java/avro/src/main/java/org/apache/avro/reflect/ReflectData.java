@@ -61,6 +61,7 @@ import org.apache.avro.io.DatumWriter;
 import org.apache.avro.specific.FixedSize;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.SchemaNormalization;
+import org.apache.avro.util.Utf8;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.NullNode;
 
@@ -390,7 +391,7 @@ public class ReflectData extends SpecificData {
       Map m = (Map)datum;
       if (m.size() > 0) {
         Class keyClass = m.keySet().iterator().next().getClass();
-        if (isStringable(keyClass) || keyClass == String.class)
+        if (isStringable(keyClass) || keyClass == String.class || keyClass == Utf8.class)
           return false;
         return true;
       }

@@ -81,7 +81,7 @@ public class TestReflectData {
 
   @Test
   public void testSchemaNamer() {
-    SchemaNamer schemaNamer = new SchemaNamer("prefix1", "org.apache");
+    SchemaNamer schemaNamer = new SchemaNamer("prefix1", "org.apache", "");
 
     ReflectData reflectData = new ReflectData.AllowNull(schemaNamer);
     Schema schema = reflectData.getSchema(R1.class);

@@ -111,7 +111,10 @@ public class GenericData {
 
   private final Map<Class<?>, Class[]> classUnionTypes = new HashMap<Class<?>, Class[]>();
 
-  protected final Set<Class<?>> parameterisedTypes = new HashSet<Class<?>>();
+  protected static final Map<java.lang.reflect.Field, String> FIELD_NAME_OVERRIDES =
+    new HashMap<java.lang.reflect.Field, String>();
+
+  private final Set<Class<?>> parameterisedTypes = new HashSet<Class<?>>();
 
   /**
    * Registers the given conversion to be used when reading and writing with
@@ -148,6 +151,10 @@ public class GenericData {
 
   protected Class[] getUnionTypes(Class<?> clazz) {
     return classUnionTypes.get(clazz);
+  }
+
+  public void addFieldNameOverride(java.lang.reflect.Field field, String alias) {
+    FIELD_NAME_OVERRIDES.put(field, alias);
   }
 
   /**

@@ -263,10 +263,8 @@ public class ReflectData extends SpecificData {
           continue;
         }
         FieldAccessor accessor = ReflectionUtil.getFieldAccess().getAccessor(f);
-        AvroName avroname = f.getAnnotation(AvroName.class);
-        byName.put( (avroname != null
-          ? avroname.value()
-          : f.getName()) , accessor);
+        String fieldName = getFieldName(f);
+        byName.put(fieldName, accessor);
       }
     }
 
@@ -687,10 +685,7 @@ public class ReflectData extends SpecificData {
                   defaultValue = NullNode.getInstance();
                 }
               }
-              AvroName annotatedName = field.getAnnotation(AvroName.class);       // Rename fields
-              String fieldName = (annotatedName != null)
-                ? annotatedName.value()
-                : field.getName();
+              String fieldName = getFieldName(field);
               Schema.Field recordField
                 = new Schema.Field(fieldName, fieldSchema, null, defaultValue);
 
@@ -716,6 +711,17 @@ public class ReflectData extends SpecificData {
       return schema;
     }
     return super.createSchema(type, names);
+  }
+
+  private static String getFieldName(Field field) {
+    AvroName annotatedName = field.getAnnotation(AvroName.class);       // Rename fields
+    if(annotatedName != null) {
+      return annotatedName.value();
+    } else if(FIELD_NAME_OVERRIDES.containsKey(field)) {
+      return FIELD_NAME_OVERRIDES.get(field);
+    } else {
+      return field.getName();
+    }
   }
 
   private String getFingerPrintStr(String recordName) {

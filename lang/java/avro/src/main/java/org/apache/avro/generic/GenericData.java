@@ -993,7 +993,7 @@ public class GenericData {
 
   public boolean isParameterisedType(Object datum) {
     return (datum != null) &&
-      (datum instanceof GenericData.EnumSymbol || parameterisedTypes.contains(datum.getClass()));
+      (datum instanceof GenericData.Param || parameterisedTypes.contains(datum.getClass()));
   }
 
   /** Called by the default implementation of {@link #instanceOf}.*/

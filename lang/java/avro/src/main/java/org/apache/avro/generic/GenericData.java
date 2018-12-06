@@ -972,7 +972,7 @@ public class GenericData {
 
   /** Called by the default implementation of {@link #instanceOf}.*/
   protected boolean isEnum(Object datum) {
-    return datum instanceof GenericEnumSymbol;
+    return datum instanceof Enum || datum instanceof GenericEnumSymbol;
   }
 
   /** Called to obtain the schema of a enum.  By default calls
@@ -992,7 +992,8 @@ public class GenericData {
   }
 
   public boolean isParameterisedType(Object datum) {
-    return (datum != null) && parameterisedTypes.contains(datum.getClass());
+    return (datum != null) &&
+      (datum instanceof GenericData.EnumSymbol || parameterisedTypes.contains(datum.getClass()));
   }
 
   /** Called by the default implementation of {@link #instanceOf}.*/

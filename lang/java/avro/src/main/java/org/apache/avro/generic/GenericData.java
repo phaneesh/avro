@@ -114,6 +114,11 @@ public class GenericData {
   protected static final Map<java.lang.reflect.Field, String> FIELD_NAME_OVERRIDES =
     new HashMap<java.lang.reflect.Field, String>();
 
+  protected static final Map<Class<?>, Map<String, Object>> VIEW_PROPERTIES =
+    new HashMap<Class<?>, Map<String, Object>>();
+
+  protected static final String VIEW_PROPERTY_PREFIX = "view_";
+
   private final Set<Class<?>> parameterisedTypes = new HashSet<Class<?>>();
 
   /**
@@ -155,6 +160,15 @@ public class GenericData {
 
   public void addFieldNameOverride(java.lang.reflect.Field field, String alias) {
     FIELD_NAME_OVERRIDES.put(field, alias);
+  }
+
+  public void addViewProperty(Class<?> clazz, String key, Object value) {
+    Map<String, Object> propMap = VIEW_PROPERTIES.get(clazz);
+    if(propMap == null) {
+      propMap = new HashMap<String, Object>();
+    }
+    propMap.put(key, value);
+    VIEW_PROPERTIES.put(clazz, propMap);
   }
 
   /**
@@ -612,12 +626,31 @@ public class GenericData {
       buffer.append("{");
       int count = 0;
       Schema schema = getRecordSchema(datum);
+      Map<String, Object> objectProps = schema.getObjectProps();
+      Map<String, Object> remainingViewProps = new HashMap<String, Object>(objectProps);
       for (Field f : schema.getFields()) {
         toString(f.name(), buffer, seenObjects);
         buffer.append(": ");
-        toString(getField(datum, f.name(), f.pos()), buffer, seenObjects);
-        if (++count < schema.getFields().size())
+        String propKey = VIEW_PROPERTY_PREFIX + f.name();
+        if(objectProps.containsKey(propKey)) {
+          toString(objectProps.get(propKey), buffer, seenObjects);
+          //viewedFields.add(propKey);
+          remainingViewProps.remove(propKey);
+        } else {
+          toString(getField(datum, f.name(), f.pos()), buffer, seenObjects);
+        }
+        if ((++count < schema.getFields().size()) || remainingViewProps.size() > 0)
           buffer.append(", ");
+      }
+      //now add the remaining view properties
+      count = remainingViewProps.size();
+      for(String propKey: remainingViewProps.keySet()) {
+        toString(propKey.replace(VIEW_PROPERTY_PREFIX, ""), buffer, seenObjects);
+        buffer.append(": ");
+        toString(objectProps.get(propKey), buffer, seenObjects);
+        if (--count > 0) {
+          buffer.append(", ");
+        }
       }
       buffer.append("}");
       seenObjects.remove(datum);

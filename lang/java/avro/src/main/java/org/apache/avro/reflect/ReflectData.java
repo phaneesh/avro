@@ -701,6 +701,13 @@ public class ReflectData extends SpecificData {
           if (error)                              // add Throwable message
             fields.add(new Schema.Field("detailMessage", THROWABLE_MESSAGE,
                                         null, null));
+          Map<String, Object> extraPropMap = VIEW_PROPERTIES.get(c);
+          if(extraPropMap != null) {
+            for(String key: extraPropMap.keySet()) {
+              Object value = extraPropMap.get(key);
+              schema.addProp(VIEW_PROPERTY_PREFIX + key, value);
+            }
+          }
           schema.setFields(fields);
           AvroMeta meta = c.getAnnotation(AvroMeta.class);
           if (meta != null)
@@ -843,7 +850,6 @@ public class ReflectData extends SpecificData {
       } catch (Exception e) {
           throw new AvroRuntimeException("Could not create schema from custom serializer for " + field.getName());
       }
-
     AvroSchema explicit = field.getAnnotation(AvroSchema.class);
     if (explicit != null)                                   // explicit schema
       return Schema.parse(explicit.value());

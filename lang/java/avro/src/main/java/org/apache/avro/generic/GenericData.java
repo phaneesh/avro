@@ -312,7 +312,7 @@ public class GenericData {
 
     @Override
     public int hashCode() {
-      return GenericData.get().hashCode(this, schema);
+      return GenericData.get().hashCode(record, schema.getValueType());
     }
 
     @Override

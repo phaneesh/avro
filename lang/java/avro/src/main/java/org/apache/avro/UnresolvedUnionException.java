@@ -18,15 +18,36 @@
 
 package org.apache.avro;
 
+import java.util.List;
+import org.apache.avro.Schema.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /** Thrown when the expected contents of a union cannot be resolved. */
 public class UnresolvedUnionException extends AvroRuntimeException {
+  private static final Logger LOG = LoggerFactory.getLogger(UnresolvedUnionException.class);
+
   private Object unresolvedDatum;
   private Schema unionSchema;
 
   public UnresolvedUnionException(Schema unionSchema, Object unresolvedDatum) {
-    super("Not in union "+unionSchema.getFullName()+": "+unresolvedDatum);
+    super("Not in union: "+ unionSchema.getFullName() + " => "+unresolvedDatum);
+    LOG.error("DatumType: " + unresolvedDatum.getClass().getName() + " and UnionSchemaTypes are: " +
+      getUnionSchemaTypes(unionSchema));
     this.unionSchema = unionSchema;
     this.unresolvedDatum = unresolvedDatum;
+  }
+
+  private String getUnionSchemaTypes(Schema unionSchema) {
+    StringBuilder builder = new StringBuilder("[");
+    if(Type.UNION.equals(unionSchema.getType())) {
+      List<Schema> types = unionSchema.getTypes();
+      for(Schema type: types) {
+        builder.append(type.getFullName()).append(", ");
+      }
+    }
+    builder.append("]");
+    return builder.toString();
   }
 
   public Object getUnresolvedDatum() {

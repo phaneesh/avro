@@ -214,7 +214,7 @@ public abstract class Schema extends JsonProperties {
    * <tt>null</tt> is returned.
    */
   public Field getField(String fieldname) {
-    throw new AvroRuntimeException("Not a record: "+this);
+    throw new AvroRuntimeException("Not a record: ["+this.getFullName()+"]");
   }
 
   /**
@@ -222,7 +222,7 @@ public abstract class Schema extends JsonProperties {
    * list is in the order of their positions.
    */
   public List<Field> getFields() {
-    throw new AvroRuntimeException("Not a record: "+this);
+    throw new AvroRuntimeException("Not a record: ["+this.getFullName()+"]");
   }
 
   /**
@@ -230,22 +230,22 @@ public abstract class Schema extends JsonProperties {
    * only once in a schema.
    */
   public void setFields(List<Field> fields) {
-    throw new AvroRuntimeException("Not a record: "+this);
+    throw new AvroRuntimeException("Not a record: ["+this.getFullName()+"]");
   }
 
   /** If this is an enum, return its symbols. */
   public List<String> getEnumSymbols() {
-    throw new AvroRuntimeException("Not an enum: "+this);
+    throw new AvroRuntimeException("Not an enum: ["+this.getFullName()+"]");
   }
 
   /** If this is an enum, return a symbol's ordinal value. */
   public int getEnumOrdinal(String symbol) {
-    throw new AvroRuntimeException("Not an enum: "+this);
+    throw new AvroRuntimeException("Not an enum: ["+this.getFullName()+"]");
   }
 
   /** If this is an enum, returns true if it contains given symbol. */
   public boolean hasEnumSymbol(String symbol) {
-    throw new AvroRuntimeException("Not an enum: "+this);
+    throw new AvroRuntimeException("Not an enum: ["+this.getFullName()+"]");
   }
 
   /** If this is a record, enum or fixed, returns its name, otherwise the name
@@ -260,7 +260,7 @@ public abstract class Schema extends JsonProperties {
 
   /** If this is a record, enum or fixed, returns its namespace, if any. */
   public String getNamespace() {
-    throw new AvroRuntimeException("Not a named type: "+this);
+    throw new AvroRuntimeException("Not a named type: ["+this.getFullName()+"]");
   }
 
   /** If this is a record, enum or fixed, returns its namespace-qualified name,
@@ -271,42 +271,42 @@ public abstract class Schema extends JsonProperties {
 
   /** If this is a record, enum or fixed, add an alias. */
   public void addAlias(String alias) {
-    throw new AvroRuntimeException("Not a named type: "+this);
+    throw new AvroRuntimeException("Not a named type: ["+this.getFullName()+"]");
   }
 
   /** If this is a record, enum or fixed, add an alias. */
   public void addAlias(String alias, String space) {
-    throw new AvroRuntimeException("Not a named type: "+this);
+    throw new AvroRuntimeException("Not a named type: ["+this.getFullName()+"]");
   }
 
   /** If this is a record, enum or fixed, return its aliases, if any. */
   public Set<String> getAliases() {
-    throw new AvroRuntimeException("Not a named type: "+this);
+    throw new AvroRuntimeException("Not a named type: ["+this.getFullName()+"]");
   }
 
   /** Returns true if this record is an error type. */
   public boolean isError() {
-    throw new AvroRuntimeException("Not a record: "+this);
+    throw new AvroRuntimeException("Not a record: ["+this.getFullName()+"]");
   }
 
   /** If this is an array, returns its element type. */
   public Schema getElementType() {
-    throw new AvroRuntimeException("Not an array: "+this);
+    throw new AvroRuntimeException("Not an array: ["+this.getFullName()+"]");
   }
 
   /** If this is a map, returns its value type. */
   public Schema getValueType() {
-    throw new AvroRuntimeException("Not a map: "+this);
+    throw new AvroRuntimeException("Not a map: ["+this.getFullName()+"]");
   }
 
   /** If this is a union, returns its types. */
   public List<Schema> getTypes() {
-    throw new AvroRuntimeException("Not a union: "+this);
+    throw new AvroRuntimeException("Not a union: ["+this.getFullName()+"]");
   }
 
   /** If this is a union, return the branch with the provided full name. */
   public Integer getIndexNamed(String name) {
-    throw new AvroRuntimeException("Not a union: "+this);
+    throw new AvroRuntimeException("Not a union: ["+this.getFullName()+"]");
   }
 
   /** If this is fixed, returns its size. */
@@ -346,7 +346,7 @@ public abstract class Schema extends JsonProperties {
   }
 
   void fieldsToJson(Names names, JsonGenerator gen) throws IOException {
-    throw new AvroRuntimeException("Not a record: "+this);
+    throw new AvroRuntimeException("Not a record: ["+this.getFullName()+"]");
   }
 
   public boolean equals(Object o) {
@@ -879,12 +879,12 @@ public abstract class Schema extends JsonProperties {
       int index = 0;
       for (Schema type : types) {
         if (type.getType() == Type.UNION)
-          throw new AvroRuntimeException("Nested union: "+this);
+          throw new AvroRuntimeException("Nested union: ["+this.getFullName()+"]");
         String name = type.getFullName();
         if (name == null)
-          throw new AvroRuntimeException("Nameless in union:"+this);
+          throw new AvroRuntimeException("Nameless in union: ["+this.getFullName()+"]");
         if (indexByName.put(name, index++) != null)
-          throw new AvroRuntimeException("Duplicate in union:" + name);
+          throw new AvroRuntimeException("Duplicate in union: ["+this.getFullName()+"]");
       }
     }
     public List<Schema> getTypes() { return types; }

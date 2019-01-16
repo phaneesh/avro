@@ -17,6 +17,8 @@
  */
 package org.apache.avro.reflect;
 
+import com.google.common.base.Defaults;
+import com.google.common.primitives.Primitives;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
@@ -84,6 +86,16 @@ public class ReflectData extends SpecificData {
 
     public AllowNull(SchemaNamer schemaNamer) {
       super(schemaNamer);
+    }
+
+    @Override
+    protected JsonNode getDefaultValue(Field field, Schema fieldSchema) {
+      JsonNode defaultValue = super.getDefaultValue(field, fieldSchema);
+      if(defaultValue == null && field.getType().isPrimitive()) {
+        Object defVal = Defaults.defaultValue(Primitives.unwrap(field.getType()));
+        defaultValue = Schema.parseJson(String.valueOf(defVal));
+      }
+      return defaultValue;
     }
 
     @Override
@@ -672,19 +684,7 @@ public class ReflectData extends SpecificData {
             if ((field.getModifiers()&(Modifier.TRANSIENT|Modifier.STATIC))==0
                 && !field.isAnnotationPresent(AvroIgnore.class)) {
               Schema fieldSchema = createFieldSchema(field, names);
-              AvroDefault defaultAnnotation
-                = field.getAnnotation(AvroDefault.class);
-              JsonNode defaultValue = (defaultAnnotation == null)
-                ? null
-                : Schema.parseJson(defaultAnnotation.value());
-
-              if (defaultValue == null
-                  && fieldSchema.getType() == Schema.Type.UNION) {
-                Schema defaultType = fieldSchema.getTypes().get(0);
-                if (defaultType.getType() == Schema.Type.NULL) {
-                  defaultValue = NullNode.getInstance();
-                }
-              }
+              JsonNode defaultValue = getDefaultValue(field, fieldSchema);
               String fieldName = getFieldName(field);
               Schema.Field recordField
                 = new Schema.Field(fieldName, fieldSchema, null, defaultValue);
@@ -718,6 +718,19 @@ public class ReflectData extends SpecificData {
       return schema;
     }
     return super.createSchema(type, names);
+  }
+
+  protected JsonNode getDefaultValue(Field field, Schema fieldSchema) {
+    AvroDefault defaultAnnotation = field.getAnnotation(AvroDefault.class);
+    JsonNode defaultValue = (defaultAnnotation == null)
+      ? null : Schema.parseJson(defaultAnnotation.value());
+    if (defaultValue == null && fieldSchema.getType() == Schema.Type.UNION) {
+      Schema defaultType = fieldSchema.getTypes().get(0);
+      if (defaultType.getType() == Schema.Type.NULL) {
+        defaultValue = NullNode.getInstance();
+      }
+    }
+    return defaultValue;
   }
 
   private static String getFieldName(Field field) {

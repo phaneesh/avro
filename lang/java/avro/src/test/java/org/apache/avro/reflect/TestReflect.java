@@ -1027,6 +1027,22 @@ public class TestReflect {
     checkBinary(schema, datum);
   }
 
+  public static class NullableStringableWithPrimivites {
+    java.math.BigDecimal number;
+    int seq;
+    boolean check;
+  }
+
+  @Test public void testNullableStringableWithPrimitives() throws Exception {
+    NullableStringableWithPrimivites datum = new NullableStringableWithPrimivites();
+    datum.number = java.math.BigDecimal.TEN;
+    datum.seq = 1;
+    datum.check = true;
+
+    Schema schema = ReflectData.AllowNull.get().getSchema(NullableStringableWithPrimivites.class);
+    checkBinary(schema, datum);
+  }
+
   public static void checkBinary(ReflectData reflectData, Schema schema,
       Object datum, boolean equals) throws IOException {
     checkBinary(reflectData, schema, datum, equals, false);

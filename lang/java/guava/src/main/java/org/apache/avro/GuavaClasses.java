@@ -18,11 +18,13 @@
 
 package org.apache.avro;
 
+import com.google.common.base.Defaults;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.MapMaker;
 import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Primitives;
 
 class GuavaClasses {
   /*
@@ -30,6 +32,8 @@ class GuavaClasses {
    * that is shaded in the avro jar.
    */
   static {
+    Primitives.class.getName();
+    Defaults.class.getName();
     MapMaker.class.getName();
     Bytes.class.getName();
     LoadingCache.class.getName();

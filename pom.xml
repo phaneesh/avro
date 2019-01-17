@@ -31,7 +31,7 @@
 
   <groupId>org.apache.avro</groupId>
   <artifactId>avro-toplevel</artifactId>
-  <version>1.8.3-ppe-7</version>
+  <version>1.8.3-ppe-8</version>
   <packaging>pom</packaging>
 
   <name>Apache Avro Toplevel</name>

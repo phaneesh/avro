@@ -27,12 +27,15 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.apache.avro.Schema;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Symbol is the base of all symbols (terminals and non-terminals) of
  * the grammar.
  */
 public abstract class Symbol {
+  private static final Logger LOG = LoggerFactory.getLogger(Symbol.class);
   /*
    * The type of symbol.
    */
@@ -388,6 +391,7 @@ public abstract class Symbol {
       return false;
     case IMPLICIT_ACTION:
       if (symbol instanceof ErrorAction) {
+        LOG.error("ErrorSymbol: " + ((ErrorAction) symbol).msg);
         return true;
       }
 

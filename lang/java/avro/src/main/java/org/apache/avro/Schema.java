@@ -1185,7 +1185,7 @@ public abstract class Schema extends JsonProperties {
       throw new SchemaParseException("Illegal initial character: "+name);
     for (int i = 1; i < length; i++) {
       char c = name.charAt(i);
-      if (!(Character.isLetterOrDigit(c) || c == '_' || c == '$'))
+      if (!(Character.isLetterOrDigit(c) || c == '_'))
         throw new SchemaParseException("Illegal character in: "+name);
     }
     return name;

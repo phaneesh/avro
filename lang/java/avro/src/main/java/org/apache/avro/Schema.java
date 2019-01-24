@@ -563,7 +563,8 @@ public abstract class Schema extends JsonProperties {
       if (this.equals(names.get(name))) {
         gen.writeString(name.getQualified(names.space()));
         return true;
-      } else if (name.name != null && !names.contains(this)) {
+      //} else if (name.name != null && !names.contains(this)) {
+        } else if (name.name != null) {
         names.put(name, this);
       }
       return false;
@@ -1159,7 +1160,8 @@ public abstract class Schema extends JsonProperties {
     public Schema put(Name name, Schema schema) {
       if (containsKey(name)) {
         //TODO: ignoring for now. Fix this properly
-        return null;
+        //return null;
+        throw new SchemaParseException("Can't redefine: "+name);
       } else {
         return super.put(name, schema);
       }
@@ -1183,7 +1185,7 @@ public abstract class Schema extends JsonProperties {
       throw new SchemaParseException("Illegal initial character: "+name);
     for (int i = 1; i < length; i++) {
       char c = name.charAt(i);
-      if (!(Character.isLetterOrDigit(c) || c == '_' || c == '$'))
+      if (!(Character.isLetterOrDigit(c) || c == '_'))
         throw new SchemaParseException("Illegal character in: "+name);
     }
     return name;
@@ -1289,7 +1291,8 @@ public abstract class Schema extends JsonProperties {
       } else if (type.equals("record") || type.equals("error")) { // record
         List<Field> fields = new ArrayList<Field>();
         result = new RecordSchema(name, doc, type.equals("error"));
-        if (name != null && !names.contains(result)) names.add(result);
+        //if (name != null && !names.contains(result)) names.add(result);
+        if (name != null) names.add(result);
         JsonNode fieldsNode = schema.get("fields");
         if (fieldsNode == null || !fieldsNode.isArray())
           throw new SchemaParseException("Record has no fields: "+schema);

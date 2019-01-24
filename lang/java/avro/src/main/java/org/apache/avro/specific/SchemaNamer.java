@@ -32,7 +32,21 @@ public class SchemaNamer {
   }
 
   public String getFullName(Class<?> clazz) {
-    return getNamespace(clazz) + "." + getName(clazz);
+    Package pkg = clazz.getPackage();
+    return prefixName(pkg, clazz.getName());
+  }
+
+  private String prefixName(Package pkg, String currName) {
+    if (pkg == null) {
+      return currName;
+    }
+    String pkgName = pkg.getName();
+    if (prefixToAttach != null && !"".equals(prefixToAttach) &&
+      pkgName.startsWith(prefixToMatch) && !pkgName.startsWith(prefixToIgnore)) {
+      return prefixToAttach + "." + currName;
+    } else {
+      return currName;
+    }
   }
 
   public String getNamespace(Class<?> clazz) {
@@ -40,12 +54,6 @@ public class SchemaNamer {
   }
 
   public String getNamespace(Package pkg) {
-    String pkgName = pkg.getName();
-    if (prefixToAttach != null && !"".equals(prefixToAttach) &&
-      pkgName.startsWith(prefixToMatch) && !pkgName.startsWith(prefixToIgnore)) {
-      return prefixToAttach + "." + pkgName;
-    } else {
-      return pkgName;
-    }
+    return prefixName(pkg, pkg.getName());
   }
 }

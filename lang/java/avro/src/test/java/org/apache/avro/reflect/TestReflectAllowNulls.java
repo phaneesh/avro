@@ -102,7 +102,7 @@ public class TestReflectAllowNulls {
         wrappers.getField("aFloat").schema());
     Assert.assertEquals(nullableSchema(double.class),
         wrappers.getField("aDouble").schema());
-    Assert.assertEquals(nullableSchema(Primitives.class),
+    Assert.assertEquals(nullableSchemaAllowNull(Primitives.class),
         wrappers.getField("anObject").schema());
   }
 
@@ -143,12 +143,18 @@ public class TestReflectAllowNulls {
   }
 
   private Schema requiredSchema(Class<?> type) {
-    return ReflectData.get().getSchema(type);
+    return ReflectData.AllowNull.get().getSchema(type);
   }
 
   private Schema nullableSchema(Class<?> type) {
     return Schema.createUnion(Arrays.asList(
         Schema.create(Schema.Type.NULL),
         ReflectData.get().getSchema(type)));
+  }
+
+  private Schema nullableSchemaAllowNull(Class<?> type) {
+    return Schema.createUnion(Arrays.asList(
+        Schema.create(Schema.Type.NULL),
+        ReflectData.AllowNull.get().getSchema(type)));
   }
 }

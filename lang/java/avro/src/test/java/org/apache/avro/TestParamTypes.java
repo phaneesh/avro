@@ -26,13 +26,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import org.apache.avro.Schema.Parser;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericData.EnumSymbol;
 import org.apache.avro.generic.GenericData.Param;
 import org.apache.avro.generic.GenericData.Record;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Decoder;
@@ -571,8 +569,8 @@ public class TestParamTypes {
     map1.put(2, "two");
 
     Map<Integer, String> map2 = new HashMap<Integer, String>();
-    map1.put(11, "eleven");
-    map1.put(12, "twelve");
+    map2.put(11, "eleven");
+    map2.put(12, "twelve");
 
     TestMap2 testMap2 = new TestMap2(map1, map2);
 

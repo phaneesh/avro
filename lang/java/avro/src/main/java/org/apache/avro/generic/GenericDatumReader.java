@@ -109,9 +109,11 @@ public class GenericDatumReader<D> implements DatumReader<D> {
 
   private static class IdentitySchema {
     private final Schema schema;
+    private final int hash;
 
     public IdentitySchema(Schema schema) {
       this.schema = schema;
+      hash = System.identityHashCode(schema);
     }
 
     public Schema getSchema() {
@@ -132,7 +134,7 @@ public class GenericDatumReader<D> implements DatumReader<D> {
 
     @Override
     public int hashCode() {
-      return schema.hashCode();
+      return hash;
     }
   }
 

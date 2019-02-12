@@ -23,7 +23,7 @@
   <parent>
     <artifactId>avro-parent</artifactId>
     <groupId>org.apache.avro</groupId>
-    <version>1.8.3-ppe-9.7</version>
+    <version>1.8.3-ppe-9.8</version>
     <relativePath>../</relativePath>
   </parent>
 
@@ -120,6 +120,14 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>8</source>
+          <target>8</target>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
@@ -214,6 +222,11 @@
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-all</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <version>2.6.2</version>
     </dependency>
   </dependencies>
 

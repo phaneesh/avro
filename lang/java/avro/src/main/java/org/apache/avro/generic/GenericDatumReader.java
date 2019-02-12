@@ -17,6 +17,9 @@
  */
 package org.apache.avro.generic;
 
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -37,7 +40,6 @@ import org.apache.avro.io.Decoder;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.ResolvingDecoder;
 import org.apache.avro.util.Utf8;
-import org.apache.avro.util.WeakIdentityHashMap;
 
 /** {@link DatumReader} for generic Java objects. */
 public class GenericDatumReader<D> implements DatumReader<D> {
@@ -97,44 +99,80 @@ public class GenericDatumReader<D> implements DatumReader<D> {
     creatorResolver = null;
   }
 
-  private static final ThreadLocal<Map<Schema,Map<Schema,ResolvingDecoder>>>
-    RESOLVER_CACHE =
-    new ThreadLocal<Map<Schema,Map<Schema,ResolvingDecoder>>>() {
-    protected Map<Schema,Map<Schema,ResolvingDecoder>> initialValue() {
-      return new WeakIdentityHashMap<Schema,Map<Schema,ResolvingDecoder>>();
+//  private static final ThreadLocal<Map<Schema,Map<Schema,ResolvingDecoder>>>
+//    RESOLVER_CACHE =
+//    new ThreadLocal<Map<Schema,Map<Schema,ResolvingDecoder>>>() {
+//    protected Map<Schema,Map<Schema,ResolvingDecoder>> initialValue() {
+//      return new WeakIdentityHashMap<Schema,Map<Schema,ResolvingDecoder>>();
+//    }
+//  };
+
+  private static class IdentitySchema {
+    private final Schema schema;
+
+    public IdentitySchema(Schema schema) {
+      this.schema = schema;
     }
-  };
+
+    public Schema getSchema() {
+      return schema;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      IdentitySchema that = (IdentitySchema) o;
+      return schema == that.schema;
+    }
+
+    @Override
+    public int hashCode() {
+      return schema.hashCode();
+    }
+  }
+
+  private static final int CACHE_MAX_ENTRIES =
+    Integer.parseInt(System.getProperty("avro.schema.resolver.cache.size", "100"));
+  private static final int CACHE_MAX_CHILD_ENTRIES =
+    Integer.parseInt(System.getProperty("avro.schema.resolver.cache.children.size", "100"));
+
+  private static final LoadingCache<IdentitySchema, LoadingCache<IdentitySchema, ResolvingDecoder>> RESOLVER_CACHE
+    = Caffeine.newBuilder()
+    .maximumSize(CACHE_MAX_ENTRIES)
+    .build(new CacheLoader<IdentitySchema, LoadingCache<IdentitySchema, ResolvingDecoder>>() {
+      @Override
+      public LoadingCache<IdentitySchema, ResolvingDecoder> load(final IdentitySchema actualIS) throws Exception {
+        return Caffeine.newBuilder()
+          .maximumSize(CACHE_MAX_CHILD_ENTRIES)
+          .build(new CacheLoader<IdentitySchema, ResolvingDecoder>() {
+            @Override
+            public ResolvingDecoder load(final IdentitySchema expectedIS) throws Exception {
+              return DecoderFactory.get().resolvingDecoder(
+                Schema.applyAliases(actualIS.getSchema(), expectedIS.getSchema()),
+                expectedIS.getSchema(), null);
+            }
+          });
+      }
+    });
+
+  //private static final ConcurrentMap<Schema, ConcurrentMap<Schema, ResolvingDecoder>> RESOLVER_CACHE
+    //= new ConcurrentHashMap<Schema, ConcurrentMap<Schema, ResolvingDecoder>>();
 
   /** Gets a resolving decoder for use by this GenericDatumReader.
    *  Unstable API.
    *  Currently uses a thread local cache to prevent constructing the
    *  resolvers too often, because that is very expensive.
    */
-  protected final ResolvingDecoder getResolver(Schema actual, Schema expected)
-    throws IOException {
-    Thread currThread = Thread.currentThread();
-    ResolvingDecoder resolver;
-    if (currThread == creator && creatorResolver != null) {
-      return creatorResolver;
-    }
-
-    Map<Schema,ResolvingDecoder> cache = RESOLVER_CACHE.get().get(actual);
-    if (cache == null) {
-      cache = new WeakIdentityHashMap<Schema,ResolvingDecoder>();
-      RESOLVER_CACHE.get().put(actual, cache);
-    }
-    resolver = cache.get(expected);
-    if (resolver == null) {
-      resolver = DecoderFactory.get().resolvingDecoder(
-          Schema.applyAliases(actual, expected), expected, null);
-      cache.put(expected, resolver);
-    }
-
-    if (currThread == creator){
-      creatorResolver = resolver;
-    }
-
-    return resolver;
+  @SuppressWarnings("ConstantConditions")
+  protected final ResolvingDecoder getResolver(Schema actual, Schema expected) throws IOException {
+    IdentitySchema actualIS = new IdentitySchema(actual);
+    IdentitySchema expectedIS = new IdentitySchema(expected);
+    return RESOLVER_CACHE.get(actualIS).get(expectedIS);
   }
 
   @Override

@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.AbstractList;
@@ -735,6 +736,11 @@ public class GenericData {
     } else if(datum instanceof java.time.LocalDate) {
       LocalDate localDate = (LocalDate) datum;
       buffer.append(localDate.toEpochDay());
+      //writeQuotedString(localDate, buffer);
+    } else if (datum instanceof java.time.LocalTime) {
+      LocalTime localTime = (LocalTime) datum;
+      buffer.append(localTime.toNanoOfDay());
+      //writeQuotedString(localTime, buffer);
     } else if(datum instanceof java.time.LocalDateTime) {
       LocalDateTime localDateTime = (LocalDateTime) datum;
       ZonedDateTime zonedDateTime = localDateTime.atZone(ZoneId.systemDefault());

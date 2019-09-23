@@ -23,7 +23,7 @@
   <parent>
     <artifactId>avro-parent</artifactId>
     <groupId>org.apache.avro</groupId>
-    <version>1.8.3-ppe-9.9</version>
+    <version>1.8.3-ppe-9.10-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
 
@@ -119,6 +119,14 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>8</source>
+          <target>8</target>
+        </configuration>
       </plugin>
     </plugins>
   </build>

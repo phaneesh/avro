@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.function.Predicate;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.slf4j.Logger;
@@ -61,7 +62,30 @@ public class SchemaCompatibility {
     final SchemaCompatibilityType compatibility =
         new ReaderWriterCompatiblityChecker()
             .getCompatibility(reader, writer);
+    return checkSchemaPairCompatibility(reader, writer, compatibility);
+  }
 
+  /**
+   * Validates that the provided reader schema can be used to decode avro data written with the
+   * provided writer schema.
+   *
+   * @param reader schema to check.
+   * @param writer schema to check.
+   * @return a result object identifying any compatibility errors.
+   */
+  public static SchemaPairCompatibility checkReaderWriterCompatibility(
+      final Schema reader,
+      final Schema writer,
+      final Predicate<Field> writerRecordFieldMissingHandler
+  ) {
+    final SchemaCompatibilityType compatibility =
+        new ReaderWriterCompatiblityChecker(writerRecordFieldMissingHandler)
+            .getCompatibility(reader, writer);
+    return checkSchemaPairCompatibility(reader, writer, compatibility);
+  }
+
+  private static SchemaPairCompatibility checkSchemaPairCompatibility(Schema reader, Schema writer,
+    SchemaCompatibilityType compatibility) {
     final String message;
     switch (compatibility) {
       case INCOMPATIBLE: {
@@ -212,6 +236,24 @@ public class SchemaCompatibility {
     private final Map<ReaderWriter, SchemaCompatibilityType> mMemoizeMap =
         new HashMap<ReaderWriter, SchemaCompatibilityType>();
 
+    private final Predicate<Field> writerRecordFieldMissingHandler;
+
+    public ReaderWriterCompatiblityChecker(Predicate<Field> writerRecordFieldMissingHandler) {
+      this.writerRecordFieldMissingHandler = writerRecordFieldMissingHandler;
+    }
+
+    public ReaderWriterCompatiblityChecker() {
+      this.writerRecordFieldMissingHandler = new Predicate<Field>() {
+        @Override
+        public boolean test(Field readerField) {
+          // Reader field does not correspond to any field in the writer record schema,
+          // reader field must have a default value.
+          // reader field has no default value
+          return readerField.defaultVal() == null;
+        }
+      };
+    }
+
     /**
      * Reports the compatibility of a reader/writer schema pair.
      *
@@ -314,10 +356,7 @@ public class SchemaCompatibility {
             for (final Field readerField : reader.getFields()) {
               final Field writerField = lookupWriterField(writer, readerField);
               if (writerField == null) {
-                // Reader field does not correspond to any field in the writer record schema,
-                // reader field must have a default value.
-                if (readerField.defaultValue() == null) {
-                  // reader field has no default value
+                if (writerRecordFieldMissingHandler.test(readerField)) {
                   return SchemaCompatibilityType.INCOMPATIBLE;
                 }
               } else {
@@ -331,6 +370,8 @@ public class SchemaCompatibility {
             // All fields in the reader record can be populated from the writer record:
             return SchemaCompatibilityType.COMPATIBLE;
           }
+          case PARAM:
+            return getCompatibility(reader.getValueType(), writer.getValueType());
           case UNION: {
             // Check that each individual branch of the writer union can be decoded:
             for (final Schema writerBranch : writer.getTypes()) {

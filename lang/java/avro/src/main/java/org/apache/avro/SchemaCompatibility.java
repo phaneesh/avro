@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import java.util.function.Predicate;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.slf4j.Logger;
@@ -76,10 +75,10 @@ public class SchemaCompatibility {
   public static SchemaPairCompatibility checkReaderWriterCompatibility(
       final Schema reader,
       final Schema writer,
-      final Predicate<Field> writerRecordFieldMissingHandler
+      final boolean shouldReaderHaveAllWriterFields
   ) {
     final SchemaCompatibilityType compatibility =
-        new ReaderWriterCompatiblityChecker(writerRecordFieldMissingHandler)
+        new ReaderWriterCompatiblityChecker(shouldReaderHaveAllWriterFields)
             .getCompatibility(reader, writer);
     return checkSchemaPairCompatibility(reader, writer, compatibility);
   }
@@ -235,23 +234,14 @@ public class SchemaCompatibility {
   private static final class ReaderWriterCompatiblityChecker {
     private final Map<ReaderWriter, SchemaCompatibilityType> mMemoizeMap =
         new HashMap<ReaderWriter, SchemaCompatibilityType>();
+    private final boolean shouldReaderHaveAllWriterFields;
 
-    private final Predicate<Field> writerRecordFieldMissingHandler;
-
-    public ReaderWriterCompatiblityChecker(Predicate<Field> writerRecordFieldMissingHandler) {
-      this.writerRecordFieldMissingHandler = writerRecordFieldMissingHandler;
+    public ReaderWriterCompatiblityChecker(boolean shouldReaderHaveAllWriterFields) {
+      this.shouldReaderHaveAllWriterFields = shouldReaderHaveAllWriterFields;
     }
 
     public ReaderWriterCompatiblityChecker() {
-      this.writerRecordFieldMissingHandler = new Predicate<Field>() {
-        @Override
-        public boolean test(Field readerField) {
-          // Reader field does not correspond to any field in the writer record schema,
-          // reader field must have a default value.
-          // reader field has no default value
-          return readerField.defaultVal() == null;
-        }
-      };
+      this.shouldReaderHaveAllWriterFields = false;
     }
 
     /**
@@ -356,7 +346,10 @@ public class SchemaCompatibility {
             for (final Field readerField : reader.getFields()) {
               final Field writerField = lookupWriterField(writer, readerField);
               if (writerField == null) {
-                if (writerRecordFieldMissingHandler.test(readerField)) {
+                // Reader field does not correspond to any field in the writer record schema,
+                // reader field must have a default value.
+                // reader field has no default value
+                if (readerField.defaultValue() == null) {
                   return SchemaCompatibilityType.INCOMPATIBLE;
                 }
               } else {
@@ -364,6 +357,13 @@ public class SchemaCompatibility {
                     == SchemaCompatibilityType.INCOMPATIBLE) {
                   return SchemaCompatibilityType.INCOMPATIBLE;
                 }
+              }
+            }
+
+            for (final Field writerField: writer.getFields()) {
+              final Field readerField = lookupWriterField(reader, writerField);
+              if (shouldReaderHaveAllWriterFields && readerField == null) {
+                return SchemaCompatibilityType.INCOMPATIBLE;
               }
             }
 
@@ -441,6 +441,7 @@ public class SchemaCompatibility {
           case FIXED: return SchemaCompatibilityType.INCOMPATIBLE;
           case ENUM: return SchemaCompatibilityType.INCOMPATIBLE;
           case RECORD: return SchemaCompatibilityType.INCOMPATIBLE;
+          case PARAM: return getCompatibility(reader.getValueType(), writer.getValueType());
           case UNION: {
             for (final Schema readerBranch : reader.getTypes()) {
               if (getCompatibility(readerBranch, writer) == SchemaCompatibilityType.COMPATIBLE) {

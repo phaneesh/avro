@@ -61,7 +61,30 @@ public class SchemaCompatibility {
     final SchemaCompatibilityType compatibility =
         new ReaderWriterCompatiblityChecker()
             .getCompatibility(reader, writer);
+    return checkSchemaPairCompatibility(reader, writer, compatibility);
+  }
 
+  /**
+   * Validates that the provided reader schema can be used to decode avro data written with the
+   * provided writer schema.
+   *
+   * @param reader schema to check.
+   * @param writer schema to check.
+   * @return a result object identifying any compatibility errors.
+   */
+  public static SchemaPairCompatibility checkReaderWriterCompatibility(
+      final Schema reader,
+      final Schema writer,
+      final boolean shouldReaderHaveAllWriterFields
+  ) {
+    final SchemaCompatibilityType compatibility =
+        new ReaderWriterCompatiblityChecker(shouldReaderHaveAllWriterFields)
+            .getCompatibility(reader, writer);
+    return checkSchemaPairCompatibility(reader, writer, compatibility);
+  }
+
+  private static SchemaPairCompatibility checkSchemaPairCompatibility(Schema reader, Schema writer,
+    SchemaCompatibilityType compatibility) {
     final String message;
     switch (compatibility) {
       case INCOMPATIBLE: {
@@ -211,6 +234,15 @@ public class SchemaCompatibility {
   private static final class ReaderWriterCompatiblityChecker {
     private final Map<ReaderWriter, SchemaCompatibilityType> mMemoizeMap =
         new HashMap<ReaderWriter, SchemaCompatibilityType>();
+    private final boolean shouldReaderHaveAllWriterFields;
+
+    public ReaderWriterCompatiblityChecker(boolean shouldReaderHaveAllWriterFields) {
+      this.shouldReaderHaveAllWriterFields = shouldReaderHaveAllWriterFields;
+    }
+
+    public ReaderWriterCompatiblityChecker() {
+      this.shouldReaderHaveAllWriterFields = false;
+    }
 
     /**
      * Reports the compatibility of a reader/writer schema pair.
@@ -316,8 +348,8 @@ public class SchemaCompatibility {
               if (writerField == null) {
                 // Reader field does not correspond to any field in the writer record schema,
                 // reader field must have a default value.
+                // reader field has no default value
                 if (readerField.defaultValue() == null) {
-                  // reader field has no default value
                   return SchemaCompatibilityType.INCOMPATIBLE;
                 }
               } else {
@@ -328,9 +360,18 @@ public class SchemaCompatibility {
               }
             }
 
+            for (final Field writerField: writer.getFields()) {
+              final Field readerField = lookupWriterField(reader, writerField);
+              if (shouldReaderHaveAllWriterFields && readerField == null) {
+                return SchemaCompatibilityType.INCOMPATIBLE;
+              }
+            }
+
             // All fields in the reader record can be populated from the writer record:
             return SchemaCompatibilityType.COMPATIBLE;
           }
+          case PARAM:
+            return getCompatibility(reader.getValueType(), writer.getValueType());
           case UNION: {
             // Check that each individual branch of the writer union can be decoded:
             for (final Schema writerBranch : writer.getTypes()) {
@@ -400,6 +441,7 @@ public class SchemaCompatibility {
           case FIXED: return SchemaCompatibilityType.INCOMPATIBLE;
           case ENUM: return SchemaCompatibilityType.INCOMPATIBLE;
           case RECORD: return SchemaCompatibilityType.INCOMPATIBLE;
+          case PARAM: return getCompatibility(reader.getValueType(), writer.getValueType());
           case UNION: {
             for (final Schema readerBranch : reader.getTypes()) {
               if (getCompatibility(readerBranch, writer) == SchemaCompatibilityType.COMPATIBLE) {
